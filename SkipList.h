@@ -8,10 +8,9 @@
 #include <ctime>
 #include <climits>
 
-static const int MAX_LEVEL = 32; // Maximum level for skip list
 static bool skiplist_seeded = false;
-static float skiplist_probability = 0.5f;
-int skiplist_max_level = 0; // Global max level tracker (externally modifiable)
+float skiplist_probability = 0.5f;
+int skiplist_max_level = 0;  // Global max level tracker (externally modifiable)
 
 // Skip List Node structure
 struct SkipListNode
@@ -42,11 +41,11 @@ void EnsureSkipListSeed()
     }
 }
 
-// Random level generator (coin flip approach)
+// Random level generator (coin flip approach) - no limit
 int RandomLevel()
 {
     int level = 0;
-    while (((float)rand() / RAND_MAX) < skiplist_probability && level < MAX_LEVEL)
+    while (((float)rand() / RAND_MAX) < skiplist_probability)
     {
         level++;
     }
@@ -81,7 +80,7 @@ SkipListNode *CreateSkipList(int id, int score)
 {
     EnsureSkipListSeed();
 
-    SkipListNode *header = new SkipListNode(MAX_LEVEL);
+    SkipListNode *header = new SkipListNode(256);
 
     int level = RandomLevel();
     SkipListNode *newNode = new SkipListNode(id, score, level);
@@ -101,10 +100,101 @@ SkipListNode *CreateSkipList(int id, int score)
     return header;
 }
 
+// Forward declarations
+SkipListNode *InsertSkipList(int id, int score, SkipListNode *header);
+
+// CreateSkipList with custom probability
+SkipListNode *CreateSkipListWithProb(int id, int score, float prob)
+{
+    EnsureSkipListSeed();
+    float old_prob = skiplist_probability;
+    skiplist_probability = prob;
+
+    SkipListNode *header = new SkipListNode(256);
+
+    int level = RandomLevel();
+    SkipListNode *newNode = new SkipListNode(id, score, level);
+
+    for (int i = 0; i <= level; i++)
+    {
+        newNode->forward[i] = header->forward[i];
+        header->forward[i] = newNode;
+    }
+
+    if (level > skiplist_max_level)
+    {
+        skiplist_max_level = level;
+    }
+
+    skiplist_probability = old_prob;
+    return header;
+}
+
+// InsertSkipList with custom probability
+SkipListNode *InsertSkipListWithProb(int id, int score, SkipListNode *header, float prob)
+{
+    float old_prob = skiplist_probability;
+    skiplist_probability = prob;
+    SkipListNode *result = InsertSkipList(id, score, header);
+    skiplist_probability = old_prob;
+    return result;
+}
+
+// InsertSkipList with manual level - for testing
+SkipListNode *InsertSkipListWithLevel(int id, int score, int level, SkipListNode *header)
+{
+    std::vector<SkipListNode *> update(256 + 1, nullptr);
+    SkipListNode *current = header;
+
+    // Find position to insert
+    for (int i = skiplist_max_level; i >= 0; i--)
+    {
+        while (current->forward[i] != nullptr && current->forward[i]->id < id)
+        {
+            current = current->forward[i];
+        }
+        update[i] = current;
+    }
+
+    current = current->forward[0];
+
+    // If id already exists, add score to existing node
+    if (current != nullptr && current->id == id)
+    {
+        current->scores.push_back(score);
+    }
+    else
+    {
+        // Create new node with specified level
+        int newLevel = level;
+
+        // Update skiplist_max_level if necessary
+        if (newLevel > skiplist_max_level)
+        {
+            for (int i = skiplist_max_level + 1; i <= newLevel; i++)
+            {
+                update[i] = header;
+            }
+            skiplist_max_level = newLevel;
+        }
+
+        SkipListNode *newNode = new SkipListNode(id, score, newLevel);
+
+        // Update forward pointers
+        for (int i = 0; i <= newLevel; i++)
+        {
+            newNode->forward[i] = update[i]->forward[i];
+            update[i]->forward[i] = newNode;
+        }
+    }
+
+    return header;
+}
+
 // InsertSkipList - 將(id, score)插入資料結構中，return更新後的root(header)
 SkipListNode *InsertSkipList(int id, int score, SkipListNode *header)
 {
-    std::vector<SkipListNode *> update(MAX_LEVEL + 1, nullptr);
+    std::vector<SkipListNode *> update(256 + 1, nullptr);
     SkipListNode *current = header;
 
     // Find position to insert

@@ -36,41 +36,80 @@ int GetBalance(AVLNode* node) {
     return node ? GetHeight(node->left) - GetHeight(node->right) : 0;
 }
 
-// Right rotation (single rotation) - 向上旋轉
-AVLNode* RotateRight(AVLNode* y) {
-    AVLNode* x = y->left;
-    AVLNode* T2 = x->right;
+// Trinode restructuring - 向上旋轉 (unified for all rotation cases)
+// Identifies 3 nodes involved in imbalance, moves middle value to top
+AVLNode* Restructure(AVLNode* z, AVLNode* y, AVLNode* x) {
+    // z = grandparent (unbalanced node)
+    // y = parent (taller child of z)
+    // x = child (taller grandchild of z)
 
-    // Perform rotation
-    x->right = y;
-    y->left = T2;
+    // Determine the configuration and restructure
+    // Goal: middle value node becomes root, smaller left, larger right
+
+    AVLNode *a, *b, *c;  // Will be sorted by id: a < b < c
+    AVLNode *T0, *T1, *T2, *T3;  // The 4 subtrees
+
+    // Identify which case and assign a, b, c accordingly
+    if (y == z->left && x == y->left) {
+        // LL case: z > y > x
+        //     z (c)
+        //    /
+        //   y (b)
+        //  /
+        // x (a)
+        a = x; b = y; c = z;
+        T0 = a->left; T1 = a->right; T2 = b->right; T3 = c->right;
+    }
+    else if (y == z->left && x == y->right) {
+        // LR case: z > x > y
+        //   z (c)
+        //  /
+        // y (a)
+        //  \
+        //   x (b)
+        a = y; b = x; c = z;
+        T0 = a->left; T1 = b->left; T2 = b->right; T3 = c->right;
+    }
+    else if (y == z->right && x == y->left) {
+        // RL case: x > z > y
+        //   z (a)
+        //    \
+        //     y (c)
+        //    /
+        //   x (b)
+        a = z; b = x; c = y;
+        T0 = a->left; T1 = b->left; T2 = b->right; T3 = c->right;
+    }
+    else {  // y == z->right && x == y->right
+        // RR case: x > y > z
+        //   z (a)
+        //    \
+        //     y (b)
+        //      \
+        //       x (c)
+        a = z; b = y; c = x;
+        T0 = a->left; T1 = b->left; T2 = c->left; T3 = c->right;
+    }
+
+    // Restructure: b becomes root, a left child, c right child
+    b->left = a;
+    b->right = c;
+    a->left = T0;
+    a->right = T1;
+    c->left = T2;
+    c->right = T3;
 
     // Update heights (bottom-up)
-    UpdateHeight(y);
-    UpdateHeight(x);
+    UpdateHeight(a);
+    UpdateHeight(c);
+    UpdateHeight(b);
 
-    return x;
+    return b;  // Middle value node becomes new root
 }
 
-// Left rotation (single rotation) - 向上旋轉
-AVLNode* RotateLeft(AVLNode* x) {
-    AVLNode* y = x->right;
-    AVLNode* T2 = y->left;
-
-    // Perform rotation
-    y->left = x;
-    x->right = T2;
-
-    // Update heights (bottom-up)
-    UpdateHeight(x);
-    UpdateHeight(y);
-
-    return y;
-}
-
-// Insert helper - inserts at leaf then balances upward (向上旋轉策略)
+// Insert helper - inserts at leaf then restructures upward (向上旋轉策略)
 AVLNode* InsertAVLHelper(AVLNode* node, int id, int score) {
-    // Standard BST insertion (insert at leaf)
+    // 1. Standard BST insertion (insert at leaf)
     if (node == nullptr) {
         return new AVLNode(id, score);
     }
@@ -85,32 +124,25 @@ AVLNode* InsertAVLHelper(AVLNode* node, int id, int score) {
         return node;
     }
 
-    // Update height of current node (going upward)
+    // 2. Update height of current node (going upward)
     UpdateHeight(node);
 
-    // Get balance factor to check if this node became unbalanced
+    // 3. Check if this node became unbalanced
     int balance = GetBalance(node);
 
-    // Left-Left Case - rotate right
-    if (balance > 1 && id < node->left->id) {
-        return RotateRight(node);
+    // 4. If unbalanced, identify the 3 nodes and restructure
+    if (balance > 1) {
+        // Left subtree is taller
+        AVLNode* y = node->left;
+        AVLNode* x = (GetHeight(y->left) >= GetHeight(y->right)) ? y->left : y->right;
+        return Restructure(node, y, x);
     }
 
-    // Right-Right Case - rotate left
-    if (balance < -1 && id > node->right->id) {
-        return RotateLeft(node);
-    }
-
-    // Left-Right Case - double rotation
-    if (balance > 1 && id > node->left->id) {
-        node->left = RotateLeft(node->left);
-        return RotateRight(node);
-    }
-
-    // Right-Left Case - double rotation
-    if (balance < -1 && id < node->right->id) {
-        node->right = RotateRight(node->right);
-        return RotateLeft(node);
+    if (balance < -1) {
+        // Right subtree is taller
+        AVLNode* y = node->right;
+        AVLNode* x = (GetHeight(y->right) >= GetHeight(y->left)) ? y->right : y->left;
+        return Restructure(node, y, x);
     }
 
     return node;

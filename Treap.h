@@ -12,13 +12,18 @@
 struct TreapNode {
     int id;
     std::vector<int> scores;
-    int priority;  // Random priority for heap property
+    double priority;  // Random priority for heap property (0.0 ~ 1.0)
     TreapNode* left;
     TreapNode* right;
 
     TreapNode(int id, int score) : id(id), left(nullptr), right(nullptr) {
         scores.push_back(score);
-        priority = rand();  // Random priority
+        priority = (double)rand() / RAND_MAX;  // Random priority between 0 and 1
+    }
+
+    // Constructor with manual priority (for testing)
+    TreapNode(int id, int score, double prio) : id(id), priority(prio), left(nullptr), right(nullptr) {
+        scores.push_back(score);
     }
 };
 
@@ -32,31 +37,63 @@ void EnsureTreapSeed() {
     }
 }
 
-// Right rotation - 向上旋轉
-TreapNode* TreapRotateRight(TreapNode* y) {
-    TreapNode* x = y->left;
-    TreapNode* T2 = x->right;
+// 向上旋轉 - Pull child up when it has higher priority
+// Right rotation: left child rotates UP to become parent
+TreapNode* RotateUp_Right(TreapNode* parent) {
+    TreapNode* child = parent->left;
 
-    x->right = y;
-    y->left = T2;
+    // Restructure: child moves up, parent becomes right child
+    parent->left = child->right;
+    child->right = parent;
 
-    return x;
+    return child;  // Child is now the root
 }
 
-// Left rotation - 向上旋轉
-TreapNode* TreapRotateLeft(TreapNode* x) {
-    TreapNode* y = x->right;
-    TreapNode* T2 = y->left;
+// Left rotation: right child rotates UP to become parent
+TreapNode* RotateUp_Left(TreapNode* parent) {
+    TreapNode* child = parent->right;
 
-    y->left = x;
-    x->right = T2;
+    // Restructure: child moves up, parent becomes left child
+    parent->right = child->left;
+    child->left = parent;
 
-    return y;
+    return child;  // Child is now the root
+}
+
+// Insert helper with manual priority - for testing
+TreapNode* InsertTreapHelperWithPriority(TreapNode* node, int id, int score, double priority) {
+    // 1. Standard BST insertion (insert at leaf)
+    if (node == nullptr) {
+        return new TreapNode(id, score, priority);
+    }
+
+    if (id < node->id) {
+        node->left = InsertTreapHelperWithPriority(node->left, id, score, priority);
+
+        // 2. Going upward - check heap property
+        // If left child has higher priority, rotate it UP
+        if (node->left->priority > node->priority) {
+            return RotateUp_Right(node);  // Left child rotates up
+        }
+    } else if (id > node->id) {
+        node->right = InsertTreapHelperWithPriority(node->right, id, score, priority);
+
+        // 2. Going upward - check heap property
+        // If right child has higher priority, rotate it UP
+        if (node->right->priority > node->priority) {
+            return RotateUp_Left(node);  // Right child rotates up
+        }
+    } else {
+        // Same id, add score to existing node
+        node->scores.push_back(score);
+    }
+
+    return node;
 }
 
 // Insert helper - inserts at leaf then rotates upward based on priority (向上旋轉策略)
 TreapNode* InsertTreapHelper(TreapNode* node, int id, int score) {
-    // Standard BST insertion (insert at leaf)
+    // 1. Standard BST insertion (insert at leaf)
     if (node == nullptr) {
         return new TreapNode(id, score);
     }
@@ -64,16 +101,18 @@ TreapNode* InsertTreapHelper(TreapNode* node, int id, int score) {
     if (id < node->id) {
         node->left = InsertTreapHelper(node->left, id, score);
 
-        // Rotate upward if child has higher priority (max-heap property)
+        // 2. Going upward - check heap property
+        // If left child has higher priority, rotate it UP
         if (node->left->priority > node->priority) {
-            return TreapRotateRight(node);
+            return RotateUp_Right(node);  // Left child rotates up
         }
     } else if (id > node->id) {
         node->right = InsertTreapHelper(node->right, id, score);
 
-        // Rotate upward if child has higher priority (max-heap property)
+        // 2. Going upward - check heap property
+        // If right child has higher priority, rotate it UP
         if (node->right->priority > node->priority) {
-            return TreapRotateLeft(node);
+            return RotateUp_Left(node);  // Right child rotates up
         }
     } else {
         // Same id, add score to existing node
@@ -92,6 +131,11 @@ TreapNode* CreateTreap(int id, int score) {
 // InsertTreap - 將(id, score)插入資料結構中，return更新後的root
 TreapNode* InsertTreap(int id, int score, TreapNode* root) {
     return InsertTreapHelper(root, id, score);
+}
+
+// InsertTreap with manual priority - for testing
+TreapNode* InsertTreapWithPriority(int id, int score, double priority, TreapNode* root) {
+    return InsertTreapHelperWithPriority(root, id, score, priority);
 }
 
 // Calculate height

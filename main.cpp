@@ -1,7 +1,12 @@
 #include <iostream>
-#include <random>
+#include <vector>
+#include <string>
 #include <chrono>
+#include <cmath>
+#include <numeric>
 #include <iomanip>
+#include <random>
+
 #include "BST.h"
 #include "AVL.h"
 #include "Treap.h"
@@ -10,16 +15,18 @@
 using namespace std;
 using namespace chrono;
 
-// Generate random data based on assignment specs
+// Data generation structure
 struct DataPoint {
     int id;
     int score;
 };
 
-vector<DataPoint> generateRandomData(int n, unsigned seed = 42) {
+// Function to generate random data
+vector<DataPoint> generateRandomData(int n, unsigned seed) {
     vector<DataPoint> data;
+    data.reserve(n);
     mt19937 gen(seed);
-    uniform_int_distribution<> id_dist(1, 1048576);  // 2^20
+    uniform_int_distribution<> id_dist(1, 1 << 20); // 2^20
     uniform_int_distribution<> score_dist(0, 100);
 
     for (int i = 0; i < n; i++) {
@@ -28,202 +35,174 @@ vector<DataPoint> generateRandomData(int n, unsigned seed = 42) {
     return data;
 }
 
-// Test function for BST
-void testBST(const vector<DataPoint>& data) {
-    cout << "========== Testing BST ==========" << endl;
+// Function to generate random search keys
+vector<int> generateSearchKeys(int m, unsigned seed) {
+    vector<int> keys;
+    keys.reserve(m);
+    mt19937 gen(seed);
+    uniform_int_distribution<> id_dist(1, 1 << 20);
 
-    // Create with first element using CreateBST
-    BSTNode* root = CreateBST(data[0].id, data[0].score);
-
-    auto start = high_resolution_clock::now();
-
-    // Insert remaining elements using InsertBST
-    for (size_t i = 1; i < data.size(); i++) {
-        root = InsertBST(data[i].id, data[i].score, root);
+    for (int i = 0; i < m; i++) {
+        keys.push_back(id_dist(gen));
     }
-
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
-
-    cout << "Insertion time: " << duration.count() << " microseconds" << endl;
-    cout << "Height: " << HeightBST(root) << endl;
-
-    // Test search
-    int testId = data[0].id;
-    double avg = SearchAVGBST(root, testId);
-    cout << "Average score for ID " << testId << ": " << avg << endl;
-
-    // Test non-existent ID
-    avg = SearchAVGBST(root, 999999999);
-    cout << "Average score for non-existent ID: " << avg << endl;
-
-    // Print tree structure (for small datasets)
-    if (data.size() <= 15) {
-        PrintBST(root);
-    }
-
-    cout << endl;
-
-    // Cleanup
-    DestroyBST(root);
+    return keys;
 }
 
-// Test function for AVL
-void testAVL(const vector<DataPoint>& data) {
-    cout << "========== Testing AVL Tree ==========" << endl;
-
-    // Create with first element using CreateAVL
-    AVLNode* root = CreateAVL(data[0].id, data[0].score);
-
-    auto start = high_resolution_clock::now();
-
-    // Insert remaining elements using InsertAVL
-    for (size_t i = 1; i < data.size(); i++) {
-        root = InsertAVL(data[i].id, data[i].score, root);
-    }
-
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
-
-    cout << "Insertion time: " << duration.count() << " microseconds" << endl;
-    cout << "Height: " << HeightAVL(root) << endl;
-
-    int testId = data[0].id;
-    double avg = SearchAVGAVL(root, testId);
-    cout << "Average score for ID " << testId << ": " << avg << endl;
-
-    avg = SearchAVGAVL(root, 999999999);
-    cout << "Average score for non-existent ID: " << avg << endl;
-
-    if (data.size() <= 15) {
-        PrintAVL(root);
-    }
-
-    cout << endl;
-
-    // Cleanup
-    DestroyAVL(root);
-}
-
-// Test function for Treap
-void testTreap(const vector<DataPoint>& data) {
-    cout << "========== Testing Treap ==========" << endl;
-
-    // Create with first element using CreateTreap
-    TreapNode* root = CreateTreap(data[0].id, data[0].score);
-
-    auto start = high_resolution_clock::now();
-
-    // Insert remaining elements using InsertTreap
-    for (size_t i = 1; i < data.size(); i++) {
-        root = InsertTreap(data[i].id, data[i].score, root);
-    }
-
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
-
-    cout << "Insertion time: " << duration.count() << " microseconds" << endl;
-    cout << "Height: " << HeightTreap(root) << endl;
-
-    int testId = data[0].id;
-    double avg = SearchAVGTreap(root, testId);
-    cout << "Average score for ID " << testId << ": " << avg << endl;
-
-    avg = SearchAVGTreap(root, 999999999);
-    cout << "Average score for non-existent ID: " << avg << endl;
-
-    if (data.size() <= 15) {
-        PrintTreap(root);
-    }
-
-    cout << endl;
-
-    // Cleanup
-    DestroyTreap(root);
-}
-
-// Test function for Skip List
-void testSkipList(const vector<DataPoint>& data) {
-    cout << "========== Testing Skip List ==========" << endl;
-
-    // Create with first element using CreateSkipList
-    SkipListNode* header = CreateSkipList(data[0].id, data[0].score);
-
-    auto start = high_resolution_clock::now();
-
-    // Insert remaining elements using InsertSkipList
-    for (size_t i = 1; i < data.size(); i++) {
-        header = InsertSkipList(data[i].id, data[i].score, header);
-    }
-
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
-
-    cout << "Insertion time: " << duration.count() << " microseconds" << endl;
-    cout << "Height: " << HeightSkipList(header) << endl;
-
-    int testId = data[0].id;
-    double avg = SearchAVGSkipList(header, testId);
-    cout << "Average score for ID " << testId << ": " << avg << endl;
-
-    avg = SearchAVGSkipList(header, 999999999);
-    cout << "Average score for non-existent ID: " << avg << endl;
-
-    if (data.size() <= 15) {
-        PrintSkipList(header);
-    }
-
-    cout << endl;
-
-    // Cleanup
-    DestroySkipList(header);
-}
 
 int main() {
-    cout << "Data Structure Comparison Assignment" << endl;
-    cout << "=====================================" << endl << endl;
+    // --- Experiment Configuration ---
+    vector<int> n_values;
+    for (int i = 10; i <= 20; ++i) {
+        n_values.push_back(pow(2, i));
+    }
 
-    // Test with small dataset first
-    cout << "Testing with SMALL dataset (15 elements):" << endl;
-    cout << "==========================================" << endl << endl;
+    const int RUNS = 10; // Number of runs to average over
+    const int SEARCH_COUNT = 100000000; // Number of searches in one batch (100 million)
+    const int BENCH_LOOPS = 5; // Run benchmark loop 5 times and take the minimum to reduce noise
 
-    vector<DataPoint> smallData = generateRandomData(15, 42);
+    // --- CSV Header ---
+    cout << "DataStructure,N,Run,InsertionTime_us,Height,AvgSearchTime_ns" << endl;
 
-    testBST(smallData);
-    testAVL(smallData);
-    testTreap(smallData);
-    testSkipList(smallData);
+    // --- Main Experiment Loop ---
+    for (int n : n_values) {
+        cerr << "Processing N = " << n << "..." << endl;
+        for (int run = 1; run <= RUNS; ++run) {
+            cerr << "  Run " << run << "/" << RUNS << "..." << endl;
+            
+            unsigned seed = time(0) + run;
+            vector<DataPoint> data = generateRandomData(n, seed);
+            vector<int> search_keys = generateSearchKeys(SEARCH_COUNT, seed + 1);
 
-    // Reset skiplist_max_level for next test
-    skiplist_max_level = 0;
+            // --- BST Test ---
+            {
+                BSTNode* root = nullptr;
+                auto start_insert = high_resolution_clock::now();
+                for (const auto& dp : data) {
+                    root = InsertBST(dp.id, dp.score, root);
+                }
+                auto end_insert = high_resolution_clock::now();
+                long long insert_time = duration_cast<microseconds>(end_insert - start_insert).count();
+                int height = HeightBST(root);
 
-    // Test with larger dataset
-    cout << "\n\nTesting with LARGE dataset (10000 elements):" << endl;
-    cout << "=============================================" << endl << endl;
+                long long min_duration_ns = -1;
+                for (int i = 0; i < BENCH_LOOPS; ++i) {
+                    auto start_search = high_resolution_clock::now();
+                    for (int key : search_keys) {
+                        SearchAVGBST(root, key);
+                    }
+                    auto end_search = high_resolution_clock::now();
+                    long long current_duration = duration_cast<nanoseconds>(end_search - start_search).count();
+                    if (min_duration_ns == -1 || current_duration < min_duration_ns) {
+                        min_duration_ns = current_duration;
+                    }
+                }
+                double avg_search_time_ns = static_cast<double>(min_duration_ns) / SEARCH_COUNT;
 
-    vector<DataPoint> largeData = generateRandomData(10000, 42);
+                cout << "BST," << n << "," << run << "," << insert_time << "," << height << "," << fixed << setprecision(2) << avg_search_time_ns << endl;
+                DestroyBST(root);
+            }
 
-    testBST(largeData);
-    testAVL(largeData);
-    testTreap(largeData);
-    testSkipList(largeData);
+            // --- AVL Test ---
+            {
+                AVLNode* root = nullptr;
+                auto start_insert = high_resolution_clock::now();
+                for (const auto& dp : data) {
+                    root = InsertAVL(dp.id, dp.score, root);
+                }
+                auto end_insert = high_resolution_clock::now();
+                long long insert_time = duration_cast<microseconds>(end_insert - start_insert).count();
+                int height = HeightAVL(root);
 
-    // Summary comparison
-    cout << "\n========== SUMMARY ==========" << endl;
-    cout << "All functions follow the specified signatures:" << endl;
-    cout << "  - addr CreateXXX(int id, int score)" << endl;
-    cout << "  - addr InsertXXX(int id, int score, addr root)" << endl;
-    cout << "  - void PrintXXX(addr root)" << endl;
-    cout << "  - int HeightXXX(addr root)" << endl;
-    cout << "  - double SearchAVGXXX(addr root, int id)" << endl;
-    cout << "\nAVL and Treap use upward rotation strategy:" << endl;
-    cout << "  - Insert at leaf position first" << endl;
-    cout << "  - Then rotate upward to maintain balance" << endl;
-    cout << "\nPerformance characteristics:" << endl;
-    cout << "  BST:       Simple, O(n) worst case height" << endl;
-    cout << "  AVL Tree:  Strictly balanced, O(log n) guaranteed" << endl;
-    cout << "  Treap:     Randomized, O(log n) expected" << endl;
-    cout << "  Skip List: Probabilistic, O(log n) expected" << endl;
+                long long min_duration_ns = -1;
+                for (int i = 0; i < BENCH_LOOPS; ++i) {
+                    auto start_search = high_resolution_clock::now();
+                    for (int key : search_keys) {
+                        SearchAVGAVL(root, key);
+                    }
+                    auto end_search = high_resolution_clock::now();
+                    long long current_duration = duration_cast<nanoseconds>(end_search - start_search).count();
+                    if (min_duration_ns == -1 || current_duration < min_duration_ns) {
+                        min_duration_ns = current_duration;
+                    }
+                }
+                double avg_search_time_ns = static_cast<double>(min_duration_ns) / SEARCH_COUNT;
 
+                cout << "AVL," << n << "," << run << "," << insert_time << "," << height << "," << fixed << setprecision(2) << avg_search_time_ns << endl;
+                DestroyAVL(root);
+            }
+
+            // --- Treap Test ---
+            {
+                EnsureTreapSeed();
+                TreapNode* root = nullptr;
+                auto start_insert = high_resolution_clock::now();
+                for (const auto& dp : data) {
+                    root = InsertTreap(dp.id, dp.score, root);
+                }
+                auto end_insert = high_resolution_clock::now();
+                long long insert_time = duration_cast<microseconds>(end_insert - start_insert).count();
+                int height = HeightTreap(root);
+
+                long long min_duration_ns = -1;
+                for (int i = 0; i < BENCH_LOOPS; ++i) {
+                    auto start_search = high_resolution_clock::now();
+                    for (int key : search_keys) {
+                        SearchAVGTreap(root, key);
+                    }
+                    auto end_search = high_resolution_clock::now();
+                    long long current_duration = duration_cast<nanoseconds>(end_search - start_search).count();
+                    if (min_duration_ns == -1 || current_duration < min_duration_ns) {
+                        min_duration_ns = current_duration;
+                    }
+                }
+                double avg_search_time_ns = static_cast<double>(min_duration_ns) / SEARCH_COUNT;
+
+                cout << "Treap," << n << "," << run << "," << insert_time << "," << height << "," << fixed << setprecision(2) << avg_search_time_ns << endl;
+                DestroyTreap(root);
+            }
+
+            // --- Skip List Tests ---
+            float probabilities[] = {0.5f, 0.25f, 0.75f};
+            string sl_names[] = {"SkipList_p05", "SkipList_p025", "SkipList_p075"};
+
+            for (int i = 0; i < 3; ++i) {
+                skiplist_probability = probabilities[i];
+                skiplist_max_level = 0;
+                EnsureSkipListSeed();
+
+                SkipListNode* header = nullptr;
+                auto start_insert = high_resolution_clock::now();
+                for (const auto& dp : data) {
+                    if (header == nullptr) {
+                        header = CreateSkipList(dp.id, dp.score);
+                    } else {
+                        header = InsertSkipList(dp.id, dp.score, header);
+                    }
+                }
+                auto end_insert = high_resolution_clock::now();
+                long long insert_time = duration_cast<microseconds>(end_insert - start_insert).count();
+                int height = HeightSkipList(header);
+
+                long long min_duration_ns = -1;
+                for (int j = 0; j < BENCH_LOOPS; ++j) {
+                    auto start_search = high_resolution_clock::now();
+                    for (int key : search_keys) {
+                        SearchAVGSkipList(header, key);
+                    }
+                    auto end_search = high_resolution_clock::now();
+                    long long current_duration = duration_cast<nanoseconds>(end_search - start_search).count();
+                    if (min_duration_ns == -1 || current_duration < min_duration_ns) {
+                        min_duration_ns = current_duration;
+                    }
+                }
+                double avg_search_time_ns = static_cast<double>(min_duration_ns) / SEARCH_COUNT;
+
+                cout << sl_names[i] << "," << n << "," << run << "," << insert_time << "," << height << "," << fixed << setprecision(2) << avg_search_time_ns << endl;
+                DestroySkipList(header);
+            }
+        }
+    }
+
+    cerr << "Experiment finished." << endl;
     return 0;
 }
